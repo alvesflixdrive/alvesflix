@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlvesFlix AI</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { background-color: #09090b; }
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #18181b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ef4444; }
+        
+        .sparkle-btn {
+            background: linear-gradient(45deg, #7f1d1d, #b91c1c, #f59e0b);
+            background-size: 200% 200%;
+            animation: gradient 3s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Ícones ---
+        const Icon = ({ path, className, size = 24, fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const Icons = {
+            Play: (props) => <Icon {...props} fill={props.fill || "none"} path={<polygon points="5 3 19 12 5 21 5 3"></polygon>} />,
+            Film: (props) => <Icon {...props} path={<><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M7 3v18" /><path d="M3 7.5h4" /><path d="M3 12h18" /><path d="M3 16.5h4" /><path d="M17 3v18" /><path d="M17 7.5h4" /><path d="M17 16.5h4" /></>} />,
+            Tv: (props) => <Icon {...props} path={<><rect width="20" height="15" x="2" y="7" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" /></>} />,
+            Music: (props) => <Icon {...props} path={<><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>} />,
+            Image: (props) => <Icon {...props} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></>} />,
+            Settings: (props) => <Icon {...props} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></>} />,
+            Trash: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>} />,
+            Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} />,
+            Search: (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>} />,
+            ChevronRight: (props) => <Icon {...props} path={<path d="m9 18 6-6-6-6" />} />,
+            X: (props) => <Icon {...props} path={<path d="M18 6 6 18M6 6l12 12" />} />,
+            Loader2: (props) => <Icon {...props} className={`animate-spin ${props.className || ''}`} path={<path d="M21 12a9 9 0 1 1-6.219-8.56" />} />,
+            Edit: (props) => <Icon {...props} path={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>} />,
+            Sparkles: (props) => <Icon {...props} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
+            MessageSquare: (props) => <Icon {...props} path={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />} />,
+            Send: (props) => <Icon {...props} path={<><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>} />,
+            Lock: (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>} />,
+            Clock: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
+        };
+
+        // --- Componentes UI ---
+
+        const Modal = ({ children, onClose }) => (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="relative w-full max-w-5xl bg-zinc-900 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-white hover:text-red-500 z-10 p-2 bg-black/50 rounded-full transition-colors"
+                    >
+                        <Icons.X size={24} />
+                    </button>
+                    {children}
+                </div>
+            </div>
+        );
+
+        const PasswordModal = ({ onConfirm, onClose }) => {
+            const [pass, setPass] = useState('');
+            const [error, setError] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (pass === '9328') {
+                    onConfirm();
+                } else {
+                    setError(true);
+                    setPass('');
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4">
+                    <div className="w-full max-w-sm bg-zinc-900 p-8 rounded-lg border border-red-900/50 shadow-red-900/20 shadow-xl">
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Icons.Lock className="text-red-500" /> Acesso Restrito
+                        </h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Senha de Administrador</label>
+                                <input 
+                                    autoFocus
+                                    type="password" 
+                                    value={pass} 
+                                    onChange={(e) => {setPass(e.target.value); setError(false);}} 
+                                    className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none placeholder-zinc-600" 
+                                    placeholder="••••" 
+                                />
+                                {error && <p className="text-red-500 text-xs mt-2 font-bold">Senha incorreta.</p>}
+                            </div>
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button type="button" onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors">Cancelar</button>
+                                <button type="submit" className="px-6 py-2 bg-red-700 hover:bg-red-600 text-white rounded font-medium transition-colors shadow-lg shadow-red-900/30">Entrar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const ConfigModal = ({ currentConfig, onSave, onClose }) => {
+            const [cfg, setCfg] = useState(currentConfig);
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+                    <div className="w-full max-w-md bg-zinc-900 p-8 rounded-lg border border-red-900/30 shadow-red-900/20 shadow-lg">
+                        <h2 className="text-2xl font-bold text-red-600 mb-6 flex items-center gap-2"><Icons.Settings /> Configurações</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Gemini API Key (Para IA)</label>
+                                <input type="password" value={cfg.geminiKey || ''} onChange={(e) => setCfg({...cfg, geminiKey: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="AIzaSy..." />
+                                <p className="text-xs text-zinc-600 mt-1">Necessário para usar o Oráculo e Auto-Preenchimento.</p>
+                            </div>
+                        </div>
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white">Cancelar</button>
+                            <button onClick={() => onSave(cfg)} className="px-6 py-2 bg-red-700 hover:bg-red-600 text-white rounded font-medium">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const OracleModal = ({ library, apiKey, onClose }) => {
+            const [messages, setMessages] = useState([
+                {role: 'system', text: 'Olá! Sou o Oráculo do AlvesFlix. Conheço sua biblioteca. O que vamos assistir hoje?'}
+            ]);
+            const [input, setInput] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };
+
+            useEffect(scrollToBottom, [messages]);
+
+            const handleSend = async () => {
+                if (!input.trim() || !apiKey) return;
+                
+                const userMsg = { role: 'user', text: input };
+                setMessages(prev => [...prev, userMsg]);
+                setInput('');
+                setIsLoading(true);
+
+                try {
+                    const libraryContext = library.map(item => `${item.name} (${item.category}, ${item.genre || 'Gênero desc.'})`).join(', ');
+                    
+                    const prompt = `
+                        Você é um assistente de filmes chamado 'Oráculo AlvesFlix'. 
+                        O usuário tem estes itens na biblioteca: [${libraryContext}].
+                        Responda em Português do Brasil. Seja curto, divertido e sugira algo da lista acima se possível.
+                        Pergunta do usuário: "${userMsg.text}"
+                    `;
+
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    const data = await response.json();
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, o Oráculo está confuso agora.";
+
+                    setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
+                } catch (error) {
+                    setMessages(prev => [...prev, { role: 'ai', text: "Erro ao consultar os espíritos digitais (Verifique sua API Key)." }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="relative w-full max-w-2xl bg-zinc-900 rounded-xl shadow-2xl border border-zinc-800 flex flex-col h-[80vh]">
+                        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-gradient-to-r from-purple-900/20 to-zinc-900 rounded-t-xl">
+                            <h2 className="text-xl font-bold text-purple-400 flex items-center gap-2">
+                                <Icons.Sparkles className="text-purple-400" /> Oráculo IA
+                            </h2>
+                            <button onClick={onClose}><Icons.X className="text-zinc-400 hover:text-white"/></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {messages.map((msg, idx) => (
+                                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                                        msg.role === 'user' 
+                                        ? 'bg-zinc-700 text-white rounded-br-none' 
+                                        : msg.role === 'ai' 
+                                            ? 'bg-purple-900/30 border border-purple-500/30 text-purple-100 rounded-bl-none'
+                                            : 'bg-zinc-800 text-zinc-400 text-center w-full italic'
+                                    }`}>
+                                        {msg.text}
+                                    </div>
+                                </div>
+                            ))}
+                            {isLoading && (
+                                <div className="flex justify-start">
+                                    <div className="bg-purple-900/30 p-3 rounded-lg rounded-bl-none flex gap-2 items-center">
+                                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <div className="p-4 border-t border-zinc-800 flex gap-2">
+                            <input 
+                                type="text" 
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                placeholder={apiKey ? "Pergunte ao Oráculo..." : "Configure a Gemini API Key primeiro"}
+                                disabled={!apiKey}
+                                className="flex-1 bg-zinc-950 border border-zinc-700 rounded-full px-4 py-2 text-white focus:outline-none focus:border-purple-500"
+                            />
+                            <button 
+                                onClick={handleSend}
+                                disabled={!apiKey || isLoading}
+                                className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-full transition-colors"
+                            >
+                                <Icons.Send size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AddItemModal = ({ category, apiKey, onSave, onClose }) => {
+            const [form, setForm] = useState({ name: '', poster: '', url: '', description: '', genre: '' });
+            const [isGenerating, setIsGenerating] = useState(false);
+
+            const handleMagicFill = async () => {
+                if (!form.name || !apiKey) return;
+                setIsGenerating(true);
+                try {
+                    const prompt = `
+                        Gere informações para o filme/série: "${form.name}".
+                        Responda APENAS um JSON válido com este formato:
+                        { "description": "Uma sinopse curta (max 40 palavras) em Português", "genre": "Gênero principal (ex: Ação)" }
+                    `;
+                    
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    
+                    const data = await response.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const cleanJson = text.replace(/```json|```/g, '').trim();
+                    const result = JSON.parse(cleanJson);
+                    
+                    setForm(prev => ({
+                        ...prev,
+                        description: result.description || prev.description,
+                        genre: result.genre || prev.genre
+                    }));
+                } catch (e) {
+                    alert("Erro ao gerar dados com IA. Verifique sua chave ou tente novamente.");
+                } finally {
+                    setIsGenerating(false);
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave({
+                    id: Date.now().toString(),
+                    ...form,
+                    category,
+                    seasons: [] 
+                });
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+                    <div className="w-full max-w-md bg-zinc-900 p-8 rounded-lg border border-red-900/30 shadow-lg max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-xl font-bold text-white mb-6">Adicionar em {category}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Título</label>
+                                <div className="flex gap-2">
+                                    <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="Ex: Matrix" />
+                                    {apiKey && (
+                                        <button 
+                                            type="button" 
+                                            onClick={handleMagicFill}
+                                            disabled={isGenerating || !form.name}
+                                            className="sparkle-btn text-white px-3 rounded shadow-lg disabled:opacity-50"
+                                            title="Preencher com IA"
+                                        >
+                                            {isGenerating ? <Icons.Loader2 className="animate-spin" /> : <Icons.Sparkles />}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Gênero</label>
+                                    <input type="text" value={form.genre} onChange={e => setForm({...form, genre: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="Ex: Sci-Fi" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Capa (URL)</label>
+                                    <input required type="url" value={form.poster} onChange={e => setForm({...form, poster: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="https://..." />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Sinopse</label>
+                                <textarea rows="3" value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="Descrição do filme..."></textarea>
+                            </div>
+                            
+                            {category !== 'series' && category !== 'fotos' && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Link do Arquivo</label>
+                                    <input type="text" value={form.url} onChange={e => setForm({...form, url: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="Link direto ou Drive" />
+                                </div>
+                            )}
+
+                             {category === 'fotos' && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 uppercase mb-1">Link da Foto</label>
+                                    <input type="text" value={form.url} onChange={e => setForm({...form, url: e.target.value})} className="w-full bg-zinc-800 text-white p-3 rounded border border-zinc-700 focus:border-red-600 focus:outline-none" placeholder="Link da imagem" />
+                                </div>
+                            )}
+
+                            <div className="mt-8 flex justify-end gap-3">
+                                <button type="button" onClick={onClose} className="px-4 py-2 text-zinc-400 hover:text-white">Cancelar</button>
+                                <button type="submit" className="px-6 py-2 bg-red-700 hover:bg-red-600 text-white rounded font-medium">Salvar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+            <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-3 transition-all duration-200 border-l-4 ${active ? 'border-red-600 bg-gradient-to-r from-red-900/20 to-transparent text-white' : 'border-transparent text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <span className={active ? 'text-red-500' : ''}>{icon}</span><span className="font-medium text-sm">{label}</span>
+            </button>
+        );
+
+        const MobileNavIcon = ({ active, onClick, icon }) => (
+            <button onClick={onClick} className={`p-4 flex flex-col items-center justify-center ${active ? 'text-red-600' : 'text-zinc-500'}`}>{icon}</button>
+        );
+
+        // --- App Principal ---
+
+        function AlvesFlix() {
+            // Estado Global
+            const [library, setLibrary] = useState(() => {
+                const saved = localStorage.getItem('alvesflix_library');
+                return saved ? JSON.parse(saved) : [];
+            });
+            
+            // Histórico de Assistidos
+            const [watchHistory, setWatchHistory] = useState(() => {
+                const saved = localStorage.getItem('alvesflix_history');
+                return saved ? JSON.parse(saved) : {}; // { itemId: { timestamp: number, lastWatched: DateStr } }
+            });
+
+            const [config, setConfig] = useState(() => {
+                const saved = localStorage.getItem('alvesflix_config');
+                return saved ? JSON.parse(saved) : { apiKey: '', clientId: '', geminiKey: '' };
+            });
+
+            const [activeTab, setActiveTab] = useState('filmes');
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+            const [isConfigOpen, setIsConfigOpen] = useState(false);
+            const [isOracleOpen, setIsOracleOpen] = useState(false);
+            const [showPasswordModal, setShowPasswordModal] = useState(false); // NOVO
+            const [searchTerm, setSearchTerm] = useState('');
+
+            // Estados da Série sendo visualizada
+            const [activeSeason, setActiveSeason] = useState(null);
+            
+            // Persistência
+            useEffect(() => {
+                localStorage.setItem('alvesflix_library', JSON.stringify(library));
+            }, [library]);
+
+            useEffect(() => {
+                localStorage.setItem('alvesflix_history', JSON.stringify(watchHistory));
+            }, [watchHistory]);
+
+            const handleConfigSave = (newConfig) => {
+                localStorage.setItem('alvesflix_config', JSON.stringify(newConfig));
+                setConfig(newConfig);
+                setIsConfigOpen(false);
+            };
+
+            // CRUD Handlers
+            const handleAddItem = (item) => {
+                setLibrary([item, ...library]);
+                setIsAddModalOpen(false);
+            };
+
+            const handleDeleteItem = (e, id) => {
+                e.stopPropagation();
+                if(confirm('Tem certeza que deseja apagar este item?')) {
+                    setLibrary(library.filter(i => i.id !== id));
+                    if(selectedItem?.id === id) setSelectedItem(null);
+                    const newHistory = { ...watchHistory };
+                    delete newHistory[id];
+                    setWatchHistory(newHistory);
+                }
+            };
+            
+            // --- Helper de Autenticação para Modo Edição (AGORA USA MODAL) ---
+            const toggleEditMode = () => {
+                if (isEditMode) {
+                    setIsEditMode(false);
+                } else {
+                    setShowPasswordModal(true); // Abre o modal em vez de prompt
+                }
+            };
+
+            const handlePasswordSuccess = () => {
+                setIsEditMode(true);
+                setShowPasswordModal(false);
+            };
+
+            // Helpers para Links e Imagens
+            const getPosterUrl = (url) => {
+                if (!url) return '';
+                const driveRegex = /\/d\/([a-zA-Z0-9_-]+)|id=([a-zA-Z0-9_-]+)/;
+                const match = url.match(driveRegex);
+                const id = match ? (match[1] || match[2]) : null;
+
+                if (id) {
+                    return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
+                }
+                return url;
+            };
+
+            const getEmbedUrl = (url) => {
+                if (!url) return '';
+                if (url.includes('drive.google.com')) {
+                    return url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
+                }
+                return url;
+            };
+
+            const isVideoFile = (url) => {
+                return url && (url.endsWith('.mp4') || url.endsWith('.webm') || url.endsWith('.mkv'));
+            };
+
+            // Watch History Logic
+            const updateWatchHistory = (id, timestamp) => {
+                setWatchHistory(prev => ({
+                    ...prev,
+                    [id]: {
+                        timestamp: timestamp,
+                        lastWatched: new Date().toISOString()
+                    }
+                }));
+            };
+
+            const handleVideoProgress = (e, id) => {
+                const time = e.target.currentTime;
+                if (Math.floor(time) % 5 === 0) {
+                    updateWatchHistory(id, time);
+                }
+            };
+
+            const markAsWatched = (id) => {
+                updateWatchHistory(id, 0); 
+            };
+
+            // Logic for Series Episodes
+            const handleAddSeason = () => {
+                if(!selectedItem) return;
+                const newSeasonName = prompt("Nome da Temporada (Ex: Temporada 1):");
+                if(!newSeasonName) return;
+
+                const updatedItem = {
+                    ...selectedItem,
+                    seasons: [
+                        ...selectedItem.seasons, 
+                        { id: Date.now().toString(), name: newSeasonName, episodes: [] }
+                    ]
+                };
+                
+                updateLibraryItem(updatedItem);
+            };
+
+            const handleAddEpisode = (seasonId) => {
+                const name = prompt("Nome do Episódio:");
+                if(!name) return;
+                const url = prompt("Link do Vídeo (Drive ou Direto):");
+                if(!url) return;
+
+                const updatedItem = { ...selectedItem };
+                const seasonIndex = updatedItem.seasons.findIndex(s => s.id === seasonId);
+                if(seasonIndex > -1) {
+                    updatedItem.seasons[seasonIndex].episodes.push({
+                        id: Date.now().toString(),
+                        name,
+                        url
+                    });
+                    updateLibraryItem(updatedItem);
+                }
+            };
+
+            const handleDeleteEpisode = (seasonId, episodeId) => {
+                 if(!confirm("Apagar episódio?")) return;
+                 const updatedItem = { ...selectedItem };
+                 const seasonIndex = updatedItem.seasons.findIndex(s => s.id === seasonId);
+                 if(seasonIndex > -1) {
+                     updatedItem.seasons[seasonIndex].episodes = updatedItem.seasons[seasonIndex].episodes.filter(ep => ep.id !== episodeId);
+                     updateLibraryItem(updatedItem);
+                 }
+            };
+
+            const updateLibraryItem = (newItem) => {
+                const newLib = library.map(i => i.id === newItem.id ? newItem : i);
+                setLibrary(newLib);
+                setSelectedItem(newItem);
+                if (activeSeason) {
+                    const stillExists = newItem.seasons.find(s => s.id === activeSeason.id);
+                    if (stillExists) setActiveSeason(stillExists);
+                }
+            };
+
+            // Filtragem
+            const filteredItems = library.filter(item => 
+                item.category === activeTab && 
+                item.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            // Itens para "Continuar Assistindo"
+            const continueWatchingItems = library.filter(item => watchHistory[item.id]).sort((a, b) => {
+                const dateA = new Date(watchHistory[a.id].lastWatched);
+                const dateB = new Date(watchHistory[b.id].lastWatched);
+                return dateB - dateA; // Mais recente primeiro
+            });
+
+            useEffect(() => {
+                if(selectedItem && selectedItem.category === 'series' && selectedItem.seasons?.length > 0 && !activeSeason) {
+                    setActiveSeason(selectedItem.seasons[0]);
+                }
+            }, [selectedItem]);
+
+            return (
+                <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-red-900 selection:text-white pb-20 md:pb-0">
+                    
+                    {/* Sidebar */}
+                    <nav className="fixed md:left-0 md:top-0 md:h-full md:w-64 w-full bottom-0 bg-zinc-900/95 backdrop-blur-md border-r border-zinc-800 z-50 flex md:flex-col justify-between p-4 md:py-8">
+                        <div className="hidden md:block">
+                            <h1 className="text-3xl font-bold text-red-600 mb-1 tracking-tighter">ALVESFLIX</h1>
+                            <p className="text-xs text-zinc-500 mb-8 uppercase tracking-widest">Personal Manager</p>
+
+                            <div className="space-y-2">
+                                <NavButton active={activeTab === 'filmes'} onClick={() => setActiveTab('filmes')} icon={<Icons.Film size={20} />} label="Filmes" />
+                                <NavButton active={activeTab === 'series'} onClick={() => setActiveTab('series')} icon={<Icons.Tv size={20} />} label="Séries" />
+                                <NavButton active={activeTab === 'musicas'} onClick={() => setActiveTab('musicas')} icon={<Icons.Music size={20} />} label="Músicas" />
+                                <NavButton active={activeTab === 'fotos'} onClick={() => setActiveTab('fotos')} icon={<Icons.Image size={20} />} label="Fotos" />
+                            </div>
+                        </div>
+
+                        {/* Mobile Logic */}
+                        <div className="md:hidden flex items-center mr-4"><span className="text-red-600 font-bold text-xl">A</span></div>
+                        <div className="flex md:hidden justify-around w-full items-center">
+                            <MobileNavIcon active={activeTab === 'filmes'} onClick={() => setActiveTab('filmes')} icon={<Icons.Film size={24} />} />
+                            <MobileNavIcon active={activeTab === 'series'} onClick={() => setActiveTab('series')} icon={<Icons.Tv size={24} />} />
+                            <MobileNavIcon active={activeTab === 'musicas'} onClick={() => setActiveTab('musicas')} icon={<Icons.Music size={24} />} />
+                        </div>
+
+                        <div className="hidden md:block space-y-2 pt-8 border-t border-zinc-800">
+                           <button 
+                                onClick={() => setIsOracleOpen(true)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-purple-400 hover:text-white hover:bg-purple-900/20 rounded transition-all mb-2 cursor-pointer"
+                           >
+                                <Icons.Sparkles size={20} />
+                                <span>Oráculo IA</span>
+                           </button>
+
+                           <button 
+                                onClick={toggleEditMode} 
+                                className={`w-full flex items-center gap-3 px-4 py-2 rounded transition-all cursor-pointer ${isEditMode ? 'bg-red-900/30 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                           >
+                               {isEditMode ? <Icons.Edit size={20} /> : <Icons.Lock size={20} />}
+                               <span>{isEditMode ? 'Modo Edição ON' : 'Gerenciar'}</span>
+                           </button>
+
+                           <button 
+                                onClick={() => setIsConfigOpen(true)} 
+                                className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all cursor-pointer"
+                           >
+                               <Icons.Settings size={20} />
+                               <span>Configurações</span>
+                           </button>
+                        </div>
+                    </nav>
+
+                    {/* Área Principal */}
+                    <main className="md:ml-64 min-h-screen">
+                        <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-md p-6 flex justify-between items-center border-b border-zinc-900">
+                            <div className="flex items-center gap-4 w-full max-w-md bg-zinc-900 rounded-full px-4 py-2 border border-zinc-800 focus-within:border-red-700">
+                                <Icons.Search className="text-zinc-500" size={18} />
+                                <input type="text" placeholder={`Buscar em ${activeTab}...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent border-none focus:outline-none text-sm w-full text-white placeholder-zinc-500"/>
+                            </div>
+                            <div className="md:hidden flex gap-4">
+                                <button onClick={() => setIsOracleOpen(true)} className="text-purple-400"><Icons.Sparkles /></button>
+                                <button onClick={toggleEditMode} className={isEditMode ? "text-red-500" : "text-zinc-400"}>
+                                    {isEditMode ? <Icons.Edit /> : <Icons.Lock />}
+                                </button>
+                                <button onClick={() => setIsConfigOpen(true)} className="text-zinc-400"><Icons.Settings /></button>
+                            </div>
+                        </header>
+
+                        <div className="p-6 md:p-8">
+                            
+                            {/* Seção Continuar Assistindo (Só aparece se houver histórico e na aba certa) */}
+                            {continueWatchingItems.length > 0 && activeTab === 'filmes' && !searchTerm && (
+                                <div className="mb-8">
+                                    <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <Icons.Clock className="text-red-500" size={20} /> Continuar Assistindo
+                                    </h2>
+                                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                                        {continueWatchingItems.map(item => (
+                                            <div 
+                                                key={item.id}
+                                                onClick={() => setSelectedItem(item)}
+                                                className="min-w-[200px] w-[200px] group relative bg-zinc-900 rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105 border border-zinc-800"
+                                            >
+                                                <div className="aspect-video w-full bg-zinc-800 relative">
+                                                    <img src={getPosterUrl(item.poster)} className="w-full h-full object-cover opacity-80 group-hover:opacity-100" />
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="bg-red-600/80 rounded-full p-2">
+                                                            <Icons.Play fill="white" size={16} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-2">
+                                                    <h3 className="font-medium text-sm text-white truncate">{item.name}</h3>
+                                                    <p className="text-xs text-zinc-500">
+                                                        {watchHistory[item.id].timestamp > 0 
+                                                            ? `Parou em ${Math.floor(watchHistory[item.id].timestamp / 60)} min`
+                                                            : 'Recém aberto'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-semibold text-white capitalize flex items-center gap-2">
+                                    {activeTab} <span className="text-zinc-600 text-sm font-normal">({filteredItems.length})</span>
+                                </h2>
+                                {isEditMode && (
+                                    <button onClick={() => setIsAddModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg shadow-red-900/20">
+                                        <Icons.Plus size={18} /> Adicionar
+                                    </button>
+                                )}
+                            </div>
+
+                            {library.length === 0 && !isEditMode && (
+                                <div className="text-center py-20 bg-zinc-900/50 rounded-lg border border-zinc-800 border-dashed">
+                                    <h3 className="text-xl font-bold text-zinc-300 mb-2">Biblioteca Vazia</h3>
+                                    <p className="text-zinc-500 mb-6">Ative o "Modo Gerenciador" para adicionar seus links manualmente.</p>
+                                    <button onClick={toggleEditMode} className="text-red-500 hover:underline">Ativar Modo Edição</button>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {filteredItems.map((item) => (
+                                    <div key={item.id} onClick={() => setSelectedItem(item)} className="group relative bg-zinc-900 rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105 hover:z-10 shadow-lg border border-zinc-800 hover:border-red-900/50">
+                                        <div className="aspect-video w-full bg-zinc-800 relative overflow-hidden">
+                                            <img 
+                                                src={getPosterUrl(item.poster)} 
+                                                alt={item.name} 
+                                                className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-60" 
+                                                onError={(e) => { e.target.src = 'https://via.placeholder.com/1920x1080/3f3f46/ffffff?text=Sem+Capa'; }}
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="bg-red-600 rounded-full p-4 shadow-xl transform scale-75 group-hover:scale-100 transition-transform">
+                                                    <Icons.Play fill="white" className="text-white ml-1" />
+                                                </div>
+                                            </div>
+                                            
+                                            {isEditMode && (
+                                                <button 
+                                                    onClick={(e) => handleDeleteItem(e, item.id)}
+                                                    className="absolute top-2 right-2 bg-black/60 p-2 rounded-full text-red-500 hover:bg-red-600 hover:text-white transition-colors z-20"
+                                                >
+                                                    <Icons.Trash size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="p-4">
+                                            <h3 className="font-medium text-white truncate">{item.name}</h3>
+                                            <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
+                                                <span className="bg-zinc-800 px-2 py-0.5 rounded uppercase">{item.category}</span>
+                                                {item.genre && <span>• {item.genre}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* Modais */}
+                    {selectedItem && (
+                        <Modal onClose={() => { setSelectedItem(null); setActiveSeason(null); }}>
+                            {selectedItem.category === 'series' ? (
+                                <div className="flex flex-col h-full bg-zinc-950">
+                                    <div className="relative h-64 shrink-0">
+                                        <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm" style={{backgroundImage: `url(${getPosterUrl(selectedItem.poster)})`}}></div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent"></div>
+                                        <div className="absolute bottom-0 left-0 p-8 w-full flex justify-between items-end">
+                                            <div className="max-w-2xl">
+                                                <h2 className="text-4xl font-bold text-white mb-2">{selectedItem.name}</h2>
+                                                <div className="flex items-center gap-2 text-sm text-zinc-400 mb-2">
+                                                    <span className="bg-red-700 text-white px-2 py-0.5 rounded text-xs font-bold">SÉRIE</span>
+                                                    <span>{selectedItem.seasons.length} Temporadas</span>
+                                                    {selectedItem.genre && <span>• {selectedItem.genre}</span>}
+                                                </div>
+                                                {selectedItem.description && <p className="text-sm text-zinc-300 line-clamp-3 md:line-clamp-none">{selectedItem.description}</p>}
+                                            </div>
+                                            {isEditMode && (
+                                                <button onClick={handleAddSeason} className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2">
+                                                    <Icons.Plus size={16} /> Nova Temporada
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-hidden flex flex-col p-6">
+                                        <div className="flex gap-2 overflow-x-auto pb-4 mb-4 border-b border-zinc-800 scrollbar-thin">
+                                            {selectedItem.seasons.map(season => (
+                                                <button 
+                                                    key={season.id} 
+                                                    onClick={() => setActiveSeason(season)}
+                                                    className={`whitespace-nowrap px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeSeason?.id === season.id ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                                                >
+                                                    {season.name}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                                            {activeSeason && (
+                                                <>
+                                                    {isEditMode && (
+                                                        <button onClick={() => handleAddEpisode(activeSeason.id)} className="w-full py-3 border-2 border-dashed border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 rounded-lg mb-4 flex justify-center items-center gap-2">
+                                                            <Icons.Plus size={16} /> Adicionar Episódio em {activeSeason.name}
+                                                        </button>
+                                                    )}
+                                                    
+                                                    {activeSeason.episodes.map(ep => (
+                                                        <div key={ep.id} className="group p-4 rounded-lg bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all flex items-center justify-between">
+                                                            <a href={getEmbedUrl(ep.url)} target="_blank" className="flex items-center gap-4 flex-1">
+                                                                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 group-hover:bg-red-600 transition-colors">
+                                                                    <Icons.Play size={16} fill="white" className="ml-1 text-zinc-400 group-hover:text-white" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <h4 className="text-white font-medium truncate">{ep.name}</h4>
+                                                                    <p className="text-xs text-zinc-500 truncate">{ep.url}</p>
+                                                                </div>
+                                                            </a>
+                                                            {isEditMode && (
+                                                                <button onClick={() => handleDeleteEpisode(activeSeason.id, ep.id)} className="text-zinc-600 hover:text-red-500 p-2">
+                                                                    <Icons.Trash size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-zinc-950 flex flex-col h-full">
+                                    <div className="relative w-full aspect-video bg-black flex items-center justify-center shrink-0">
+                                        {isVideoFile(selectedItem.url) ? (
+                                            <video 
+                                                controls 
+                                                autoPlay 
+                                                className="w-full h-full" 
+                                                src={selectedItem.url}
+                                                onTimeUpdate={(e) => handleVideoProgress(e, selectedItem.id)}
+                                                onLoadedMetadata={(e) => {
+                                                    // Resume de onde parou se existir
+                                                    if(watchHistory[selectedItem.id]?.timestamp) {
+                                                        e.target.currentTime = watchHistory[selectedItem.id].timestamp;
+                                                    }
+                                                }}
+                                            ></video>
+                                        ) : (
+                                            /* Para Iframe, só marcamos que foi aberto */
+                                            <iframe 
+                                                src={getEmbedUrl(selectedItem.url)} 
+                                                className="w-full h-full border-none"
+                                                allow="autoplay; encrypted-media; fullscreen"
+                                                allowFullScreen
+                                                onLoad={() => markAsWatched(selectedItem.id)}
+                                            ></iframe>
+                                        )}
+                                    </div>
+                                    <div className="p-8 flex-1 overflow-y-auto">
+                                        <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.name}</h2>
+                                        <div className="flex gap-4 text-zinc-400 text-sm mb-4">
+                                            <span className="bg-zinc-800 px-2 py-0.5 rounded uppercase">{selectedItem.category}</span>
+                                            {selectedItem.genre && <span className="text-zinc-500">{selectedItem.genre}</span>}
+                                        </div>
+                                        {selectedItem.description && (
+                                            <p className="text-zinc-300 mb-6 leading-relaxed">{selectedItem.description}</p>
+                                        )}
+                                        <div className="bg-zinc-900 p-4 rounded border border-zinc-800 mt-4">
+                                            <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Link do Arquivo</p>
+                                            <code className="text-red-400 break-all text-sm">{selectedItem.url}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </Modal>
+                    )}
+
+                    {isAddModalOpen && <AddItemModal category={activeTab} apiKey={config.geminiKey} onSave={handleAddItem} onClose={() => setIsAddModalOpen(false)} />}
+                    {isConfigOpen && <ConfigModal currentConfig={config} onSave={handleConfigSave} onClose={() => setIsConfigOpen(false)} />}
+                    {isOracleOpen && <OracleModal library={library} apiKey={config.geminiKey} onClose={() => setIsOracleOpen(false)} />}
+                    {showPasswordModal && <PasswordModal onConfirm={handlePasswordSuccess} onClose={() => setShowPasswordModal(false)} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AlvesFlix />);
+    </script>
+</body>
+</html>
