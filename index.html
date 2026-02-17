@@ -46,9 +46,11 @@
             Clock: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
         };
 
-        const Modal = ({ children, onClose }) => (
+        // --- Componentes UI ---
+
+        const Modal = ({ children, onClose, large }) => (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="relative w-full max-w-5xl bg-zinc-900 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className={`relative w-full bg-zinc-900 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden flex flex-col transition-all duration-300 ${large ? 'max-w-[1920px] h-[95vh]' : 'max-w-5xl max-h-[90vh]'}`}>
                     <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-red-500 z-10 p-2 bg-black/50 rounded-full transition-colors"><Icons.X size={24} /></button>
                     {children}
                 </div>
@@ -169,8 +171,6 @@
             const [activeSeason, setActiveSeason] = useState(null);
             const [playingEpisode, setPlayingEpisode] = useState(null);
 
-            // Detecção de ambiente (se é produção/servidor ou preview/local)
-            // No preview (blob:...), fetch relativo falha.
             const useBackend = useRef(window.location.protocol.startsWith('http') && !window.location.host.includes('scf.usercontent.goog'));
 
             useEffect(() => {
@@ -255,21 +255,16 @@
 
             const updateWatchHistory = (id, time) => {
                 const newHist = { ...watchHistory, [id]: { timestamp: time, lastWatched: new Date().toISOString() } };
-                setWatchHistory(newHist); // Update visual imediato
+                setWatchHistory(newHist);
             };
 
             const handleVideoTimeUpdate = (e, id) => {
                 const t = e.target.currentTime;
                 if (Math.floor(t) % 5 === 0) { 
                     const newHist = { ...watchHistory, [id]: { timestamp: t, lastWatched: new Date().toISOString() } };
-                    // Otimização: atualizar state visual mas salvar backend com debounce ou aqui mesmo se for single user
                     setWatchHistory(newHist);
-                    if (useBackend.current) {
-                        // Não aguarda o fetch para não travar UI
-                        fetch('/api/history', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newHist) }).catch(()=>{});
-                    } else {
-                        localStorage.setItem('alvesflix_history', JSON.stringify(newHist));
-                    }
+                    if (useBackend.current) fetch('/api/history', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newHist) }).catch(()=>{});
+                    else localStorage.setItem('alvesflix_history', JSON.stringify(newHist));
                 }
             };
 
@@ -329,7 +324,7 @@
 
                         <div className="p-6 md:p-8">
                             {continueWatchingItems.length > 0 && activeTab === 'filmes' && !searchTerm && (
-                                <div className="mb-8"><h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Icons.Clock className="text-red-500"/> Continuar Assistindo</h2><div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">{continueWatchingItems.map(item => (<div key={item.id} onClick={()=>setSelectedItem(item)} className="min-w-[200px] w-[200px] group relative bg-zinc-900 rounded-md overflow-hidden cursor-pointer hover:scale-105 border border-zinc-800"><div className="aspect-video w-full bg-zinc-800 relative"><img src={getPosterUrl(item.poster)} className="w-full h-full object-cover opacity-80 group-hover:opacity-100"/><div className="absolute inset-0 flex items-center justify-center"><div className="bg-red-600/80 rounded-full p-2"><Icons.Play fill="white" size={16}/></div></div></div><div className="p-2"><h3 className="font-medium text-sm text-white truncate">{item.name}</h3><p className="text-xs text-zinc-500">{watchHistory[item.id].timestamp>0?`... ${Math.floor(watchHistory[item.id].timestamp/60)} min`:'Recém aberto'}</p></div></div>))}</div></div>
+                                <div className="mb-8"><h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Icons.Clock className="text-red-500"/> Continuar Assistindo</h2><div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">{continueWatchingItems.map(item => (<div key={item.id} onClick={()=>setSelectedItem(item)} className="min-w-[200px] w-[200px] group relative bg-zinc-900 rounded-md overflow-hidden cursor-pointer hover:scale-105 border border-zinc-800"><div className="aspect-video w-full bg-zinc-800 relative"><img src={getPosterUrl(item.poster)} className="w-full h-full object-cover opacity-80 group-hover:opacity-100" referrerPolicy="no-referrer"/><div className="absolute inset-0 flex items-center justify-center"><div className="bg-red-600/80 rounded-full p-2"><Icons.Play fill="white" size={16}/></div></div></div><div className="p-2"><h3 className="font-medium text-sm text-white truncate">{item.name}</h3><p className="text-xs text-zinc-500">{watchHistory[item.id].timestamp>0?`... ${Math.floor(watchHistory[item.id].timestamp/60)} min`:'Recém aberto'}</p></div></div>))}</div></div>
                             )}
 
                             <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-semibold text-white capitalize flex items-center gap-2">{activeTab} <span className="text-zinc-600 text-sm font-normal">({filteredItems.length})</span></h2>{isEditMode && <button onClick={()=>setIsAddModalOpen(true)} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg"><Icons.Plus size={18}/> Adicionar</button>}</div>
@@ -337,7 +332,7 @@
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {filteredItems.map((item) => (
                                     <div key={item.id} onClick={()=>setSelectedItem(item)} className="group relative bg-zinc-900 rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105 hover:z-10 shadow-lg border border-zinc-800 hover:border-red-900/50">
-                                        <div className="aspect-video w-full bg-zinc-800 relative overflow-hidden"><img src={getPosterUrl(item.poster)} alt={item.name} className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-60" onError={(e)=>{e.target.src='https://via.placeholder.com/1920x1080/3f3f46/ffffff?text=Sem+Capa'}}/><div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div className="bg-red-600 rounded-full p-4 shadow-xl transform scale-75 group-hover:scale-100 transition-transform"><Icons.Play fill="white" className="text-white ml-1"/></div></div>{isEditMode && <button onClick={(e)=>handleDeleteItem(e, item.id)} className="absolute top-2 right-2 bg-black/60 p-2 rounded-full text-red-500 hover:bg-red-600 hover:text-white transition-colors z-20"><Icons.Trash size={16}/></button>}</div>
+                                        <div className="aspect-video w-full bg-zinc-800 relative overflow-hidden"><img src={getPosterUrl(item.poster)} alt={item.name} className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-60" referrerPolicy="no-referrer" onError={(e)=>{e.target.src='https://via.placeholder.com/1920x1080/3f3f46/ffffff?text=Sem+Capa'}}/><div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div className="bg-red-600 rounded-full p-4 shadow-xl transform scale-75 group-hover:scale-100 transition-transform"><Icons.Play fill="white" className="text-white ml-1"/></div></div>{isEditMode && <button onClick={(e)=>handleDeleteItem(e, item.id)} className="absolute top-2 right-2 bg-black/60 p-2 rounded-full text-red-500 hover:bg-red-600 hover:text-white transition-colors z-20"><Icons.Trash size={16}/></button>}</div>
                                         <div className="p-4"><h3 className="font-medium text-white truncate">{item.name}</h3><div className="flex items-center gap-2 mt-1 text-xs text-zinc-500"><span className="bg-zinc-800 px-2 py-0.5 rounded uppercase">{item.category}</span>{item.genre && <span>• {item.genre}</span>}</div></div>
                                     </div>
                                 ))}
@@ -346,7 +341,7 @@
                     </main>
 
                     {selectedItem && (
-                        <Modal onClose={()=>{setSelectedItem(null); setActiveSeason(null); setPlayingEpisode(null);}}>
+                        <Modal onClose={()=>{setSelectedItem(null); setActiveSeason(null); setPlayingEpisode(null);}} large={!!playingEpisode}>
                             {selectedItem.category === 'series' ? (
                                 playingEpisode ? (
                                     <div className="flex flex-col h-full bg-zinc-950">
